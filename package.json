@@ -13,7 +13,11 @@
     "db:migrate": "pnpm --filter @meme/db migrate",
     "db:seed": "pnpm --filter @meme/db seed",
     "db:studio": "pnpm --filter @meme/db studio",
+    "dev": "pnpm --parallel --filter @meme/api --filter @meme/web --filter @meme/bot dev",
     "dev:api": "pnpm --filter @meme/api dev",
+    "dev:web": "pnpm --filter @meme/web dev",
+    "dev:bot": "pnpm --filter @meme/bot dev",
+    "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {
