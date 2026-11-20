@@ -1,5 +1,5 @@
 import { mkdirSync } from 'node:fs';
-import Fastify from 'fastify';
+import Fastify, { type FastifyError } from 'fastify';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
 import { createPrisma } from '@meme/db';
@@ -19,7 +19,7 @@ const app = Fastify({
 await app.register(cors, { origin: env.webOrigin });
 
 // Внутренние ошибки пишем в лог, а клиенту отдаём только общее сообщение
-app.setErrorHandler((error, request, reply) => {
+app.setErrorHandler((error: FastifyError, request, reply) => {
   const status = error.statusCode ?? 500;
   if (status >= 500) {
     request.log.error(error);
