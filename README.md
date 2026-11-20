@@ -11,7 +11,16 @@ Telegram Mini App — карточная игра с мемами.
 - `packages/shared` — общие типы, Zod-схемы и константы
 - `docker/` — Docker Compose
 
-## Первый запуск (Mac)
+## Запуск одной командой
+
+```bash
+pnpm start
+```
+
+Сама обновит код с GitHub, запустит Docker и базу, применит миграции, загрузит карты,
+запустит API + Mini App + бота и туннель для телефона. Остановить — Ctrl+C.
+
+## Первый запуск вручную (Mac)
 
 1. Установить pnpm: `npm install -g pnpm`
 2. Создать `.env`: `cp .env.example .env` и заполнить `BOT_TOKEN`, `MINI_APP_SHORT_NAME`, `ADMIN_TELEGRAM_ID`
