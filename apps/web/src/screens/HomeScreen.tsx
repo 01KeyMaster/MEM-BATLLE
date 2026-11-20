@@ -1,30 +1,50 @@
+import { useState } from 'react';
 import type { Me } from '@meme/shared';
 import type { Screen } from '../App.tsx';
-import { haptic, startParam } from '../lib/telegram.ts';
+import { api } from '../lib/api.ts';
+import { haptic, hapticNotify } from '../lib/telegram.ts';
 
 type Props = {
   me: Me;
   onNavigate: (screen: Screen) => void;
 };
 
-type MenuItem = { label: string; screen?: Screen; stage?: number };
+type MenuItem = { label: string; action?: () => void; stage?: number };
 
 // Главный экран
 export const HomeScreen = ({ me, onNavigate }: Props) => {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Создаём комнату и сразу заходим в лобби
+  const playWithFriends = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const { code } = await api<{ code: string }>('/rooms', { method: 'POST', body: '{}' });
+      onNavigate({ name: 'room', code });
+    } catch {
+      hapticNotify('error');
+      setError('Не удалось создать комнату');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const buttons: MenuItem[] = [
-    { label: '👥 Играть с друзьями', stage: 4 },
+    { label: busy ? 'Создаю комнату…' : '👥 Играть с друзьями', action: playWithFriends },
     { label: '🔍 Найти игру', stage: 6 },
     { label: '🎁 Пробник дня', stage: 8 },
   ];
 
   const secondary: MenuItem[] = [
-    { label: '🃏 Мои паки и колода', screen: 'deck' },
+    { label: '🃏 Мои паки и колода', action: () => onNavigate({ name: 'deck' }) },
     { label: '🛒 Магазин', stage: 7 },
   ];
 
   const open = (item: MenuItem) => {
     haptic();
-    if (item.screen) onNavigate(item.screen);
+    if (!busy) item.action?.();
   };
 
   return (
@@ -53,7 +73,8 @@ export const HomeScreen = ({ me, onNavigate }: Props) => {
           <button
             key={item.label}
             onClick={() => open(item)}
-            className="rounded-2xl bg-accent px-4 py-4 text-lg font-semibold text-accent-text transition active:scale-95"
+            disabled={!item.action}
+            className="rounded-2xl bg-accent px-4 py-4 text-lg font-semibold text-accent-text transition active:scale-95 disabled:opacity-60"
           >
             {item.label}
             {item.stage && <span className="block text-xs font-normal opacity-70">скоро · этап {item.stage}</span>}
@@ -66,7 +87,8 @@ export const HomeScreen = ({ me, onNavigate }: Props) => {
           <button
             key={item.label}
             onClick={() => open(item)}
-            className="rounded-2xl bg-bg-secondary px-3 py-4 font-semibold transition active:scale-95"
+            disabled={!item.action}
+            className="rounded-2xl bg-bg-secondary px-3 py-4 font-semibold transition active:scale-95 disabled:opacity-60"
           >
             {item.label}
             {item.stage && <span className="block text-xs font-normal text-hint">скоро · этап {item.stage}</span>}
@@ -74,7 +96,7 @@ export const HomeScreen = ({ me, onNavigate }: Props) => {
         ))}
       </div>
 
-      {startParam && <p className="text-center text-xs text-hint">startapp: {startParam}</p>}
+      {error && <p className="text-center text-sm text-red-400">{error}</p>}
     </main>
   );
 };

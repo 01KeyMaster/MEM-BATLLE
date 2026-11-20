@@ -37,4 +37,7 @@ export const env = {
   botToken: required('BOT_TOKEN'),
   adminTelegramId: telegramId('ADMIN_TELEGRAM_ID'),
   devAuth,
+  botUsername: process.env.BOT_USERNAME ?? 'mem_fight_bot',
+  miniAppShortName: process.env.MINI_APP_SHORT_NAME || null,
+  winScore: Number(process.env.WIN_SCORE) || 7,
 };

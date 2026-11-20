@@ -34,8 +34,9 @@ export const tg = window.Telegram?.WebApp;
 // Открыто ли приложение внутри Telegram (в Safari initData пустой)
 export const isInTelegram = Boolean(tg?.initData);
 
-// Параметр из ссылки t.me/<bot>/<app>?startapp=...
-export const startParam = tg?.initDataUnsafe.start_param;
+// Параметр из ссылки t.me/<bot>/<app>?startapp=... (или ?room=... при открытии кнопкой бота)
+export const startParam =
+  tg?.initDataUnsafe.start_param ?? new URLSearchParams(window.location.search).get('room') ?? undefined;
 
 export const initTelegram = () => {
   tg?.ready();  // говорим Telegram, что приложение загрузилось

@@ -8,6 +8,9 @@ export const GAME = {
   DEFAULT_WIN_SCORE: 7,  // можно переопределить через WIN_SCORE в .env
   PLAY_SECONDS: 30,      // время на ход
   VOTE_SECONDS: 20,      // время на голосование
+  RESULTS_SECONDS: 7,    // показ итогов раунда
+  LOBBY_GRACE_SECONDS: 20,   // сколько ждём вернувшегося в лобби, прежде чем убрать
+  ABANDON_GRACE_SECONDS: 60, // все люди ушли — через сколько закрыть игру
   BOT_FILL_SECONDS: 30,  // через сколько секунд добавлять ботов
 } as const;
 

@@ -15,7 +15,12 @@ const playButton = (param?: string) => {
     return new InlineKeyboard().url('🎮 Играть', param ? `${base}?startapp=${param}` : base);
   }
   const url = currentWebAppUrl();
-  if (url.startsWith('https://')) return new InlineKeyboard().webApp('🎮 Играть', url);
+  if (url.startsWith('https://')) {
+    // Без /newapp параметр передаём в адресе: Mini App прочитает ?room=...
+    const target = new URL(url);
+    if (param) target.searchParams.set('room', param);
+    return new InlineKeyboard().webApp(param ? '🎮 Войти в комнату' : '🎮 Играть', target.toString());
+  }
   return undefined;
 };
 

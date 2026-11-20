@@ -2,9 +2,13 @@
 import { AUTH_SCHEME } from '@meme/shared';
 import { isInTelegram, tg } from './telegram.ts';
 
-const DEV_TELEGRAM_ID = import.meta.env.VITE_DEV_TELEGRAM_ID as string | undefined;
+// В Safari можно открыть несколько вкладок с ?dev=1, ?dev=2, ?dev=3 — это разные игроки
+const DEV_TELEGRAM_ID =
+  new URLSearchParams(window.location.search).get('dev') ??
+  (import.meta.env.VITE_DEV_TELEGRAM_ID as string | undefined);
 
-const authHeader = () => {
+// Строка авторизации — для HTTP-заголовка и первого сообщения WebSocket
+export const authHeader = () => {
   if (isInTelegram && tg) return `${AUTH_SCHEME.TELEGRAM} ${tg.initData}`;
   // В Safari без Telegram — dev-вход (сервер примет его, только если DEV_AUTH=true)
   if (import.meta.env.DEV && DEV_TELEGRAM_ID) return `${AUTH_SCHEME.DEV} ${DEV_TELEGRAM_ID}`;

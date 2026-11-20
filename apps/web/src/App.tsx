@@ -1,16 +1,24 @@
 import { useEffect, useState } from 'react';
-import type { Me } from '@meme/shared';
+import { REF_PREFIX, type Me } from '@meme/shared';
 import { api, ApiError } from './lib/api.ts';
-import { showBackButton } from './lib/telegram.ts';
+import { showBackButton, startParam } from './lib/telegram.ts';
 import { HomeScreen } from './screens/HomeScreen.tsx';
 import { DeckScreen } from './screens/DeckScreen.tsx';
+import { RoomScreen } from './screens/RoomScreen.tsx';
 
-export type Screen = 'home' | 'deck';
+export type Screen = { name: 'home' } | { name: 'deck' } | { name: 'room'; code: string };
+
+// Открыли по ссылке-приглашению → сразу в комнату (ref_… — это рефералка, этап 8)
+const initialScreen = (): Screen =>
+  startParam && !startParam.startsWith(REF_PREFIX) && /^[A-Za-z0-9]{4,16}$/.test(startParam)
+    ? { name: 'room', code: startParam }
+    : { name: 'home' };
 
 export const App = () => {
   const [me, setMe] = useState<Me | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [screen, setScreen] = useState<Screen>('home');
+  const [screen, setScreen] = useState<Screen>(initialScreen);
+  const goHome = () => setScreen({ name: 'home' });
 
   // При запуске узнаём, кто мы. Сервер проверит initData и создаст пользователя.
   useEffect(() => {
@@ -23,28 +31,28 @@ export const App = () => {
       });
   }, []);
 
-  // Кнопка «Назад» Telegram видна на всех экранах, кроме главного
+  // Кнопка «Назад» Telegram — на экране колоды (в комнате выход — своими кнопками)
   useEffect(() => {
-    if (screen === 'home') return;
-    return showBackButton(() => setScreen('home'));
-  }, [screen]);
+    if (screen.name !== 'deck') return;
+    return showBackButton(goHome);
+  }, [screen.name]);
 
-  if (error) {
-    return <p className="p-6 text-center text-hint">{error}</p>;
-  }
-  if (!me) {
-    return <p className="p-6 text-center text-hint">Загрузка…</p>;
-  }
+  if (error) return <p className="p-6 text-center text-hint">{error}</p>;
+  if (!me) return <p className="p-6 text-center text-hint">Загрузка…</p>;
 
-  if (screen === 'deck') {
-    return (
-      <>
-        <BrowserBack onBack={() => setScreen('home')} />
-        <DeckScreen />
-      </>
-    );
+  switch (screen.name) {
+    case 'deck':
+      return (
+        <>
+          <BrowserBack onBack={goHome} />
+          <DeckScreen />
+        </>
+      );
+    case 'room':
+      return <RoomScreen key={screen.code} code={screen.code} onExit={goHome} />;
+    default:
+      return <HomeScreen me={me} onNavigate={setScreen} />;
   }
-  return <HomeScreen me={me} onNavigate={setScreen} />;
 };
 
 // В Safari нет кнопки «Назад» Telegram — показываем свою
