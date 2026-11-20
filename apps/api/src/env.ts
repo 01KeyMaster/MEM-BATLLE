@@ -11,7 +11,17 @@ const required = (name: string) => {
   return value;
 };
 
-const isProduction = process.env.NODE_ENV === 'production';
+// Telegram ID — только цифры. Частая ошибка: вписать @username вместо числа.
+const telegramId = (name: string) => {
+  const value = process.env[name]?.trim();
+  if (!value) return null;
+  if (!/^\d+$/.test(value)) {
+    throw new Error(`${name} должен быть числом (узнай у @userinfobot), а сейчас: "${value}"`);
+  }
+  return BigInt(value);
+};
+
+const isProduction =process.env.NODE_ENV === 'production';
 const devAuth = process.env.DEV_AUTH === 'true';
 
 // Защита от ошибки: dev-вход без Telegram нельзя включить на боевом сервере
@@ -25,6 +35,6 @@ export const env = {
   uploadsDir: path.resolve(ROOT_DIR, process.env.UPLOADS_DIR ?? 'uploads'),
   webOrigin: process.env.WEB_ORIGIN ?? 'http://localhost:5173',
   botToken: required('BOT_TOKEN'),
-  adminTelegramId: process.env.ADMIN_TELEGRAM_ID ? BigInt(process.env.ADMIN_TELEGRAM_ID) : null,
+  adminTelegramId: telegramId('ADMIN_TELEGRAM_ID'),
   devAuth,
 };
