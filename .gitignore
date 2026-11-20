@@ -17,3 +17,6 @@ uploads/
 .idea/
 .DS_Store
 *.log
+
+# Архивы для передачи проекта
+*.zip
