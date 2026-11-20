@@ -1,0 +1,29 @@
+{
+  "title": "Коты против всех",
+  "description": "Пример пака: скопируй эту папку в content/packs и поменяй под себя",
+  "priceStars": 75,
+  "tier": "STANDARD",
+  "isBase": false,
+  "sortOrder": 20,
+  "iconFile": "icon.svg",
+  "sponsor": {
+    "name": "Кошачий корм «Мурр»",
+    "url": "https://example.com"
+  },
+  "defaults": {
+    "source": "Нарисовано мной",
+    "license": "own"
+  },
+  "memes": [
+    { "file": "01-shock.svg", "text": "Кот в полном шоке", "rarity": "COMMON" },
+    { "file": "02-boss.svg", "text": "Кот-начальник", "rarity": "RARE" },
+    {
+      "file": "03-king.svg",
+      "text": "Король дивана",
+      "rarity": "LEGENDARY",
+      "source": "https://example.com/original-image",
+      "license": "CC0",
+      "author": "Имя автора"
+    }
+  ]
+}

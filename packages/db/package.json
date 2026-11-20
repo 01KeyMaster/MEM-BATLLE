@@ -13,12 +13,14 @@
     "migrate:deploy": "prisma migrate deploy",
     "seed": "prisma db seed",
     "studio": "prisma studio",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "content:import": "tsx scripts/import-content.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
-    "dotenv": "^18.0.10"
+    "dotenv": "^18.0.10",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@meme/shared": "workspace:*",

@@ -13,6 +13,7 @@
     "db:migrate": "pnpm --filter @meme/db migrate",
     "db:seed": "pnpm --filter @meme/db seed",
     "db:studio": "pnpm --filter @meme/db studio",
+    "content:import": "pnpm --filter @meme/db content:import",
     "dev": "pnpm --parallel --filter @meme/api --filter @meme/web --filter @meme/bot dev",
     "dev:api": "pnpm --filter @meme/api dev",
     "dev:web": "pnpm --filter @meme/web dev",

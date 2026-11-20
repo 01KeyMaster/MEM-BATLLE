@@ -11,7 +11,16 @@ type TelegramWebApp = {
   ready: () => void;
   expand: () => void;
   openTelegramLink: (url: string) => void;
-  HapticFeedback?: { impactOccurred: (style: 'light' | 'medium' | 'heavy') => void };
+  HapticFeedback?: {
+    impactOccurred: (style: 'light' | 'medium' | 'heavy') => void;
+    notificationOccurred: (type: 'error' | 'success' | 'warning') => void;
+  };
+  BackButton?: {
+    show: () => void;
+    hide: () => void;
+    onClick: (cb: () => void) => void;
+    offClick: (cb: () => void) => void;
+  };
 };
 
 declare global {
@@ -35,3 +44,18 @@ export const initTelegram = () => {
 
 export const haptic = (style: 'light' | 'medium' | 'heavy' = 'light') =>
   tg?.HapticFeedback?.impactOccurred(style);
+
+export const hapticNotify = (type: 'error' | 'success' | 'warning') =>
+  tg?.HapticFeedback?.notificationOccurred(type);
+
+// Системная кнопка «Назад» в шапке Telegram. Возвращает функцию для отписки.
+export const showBackButton = (onBack: () => void) => {
+  const button = tg?.BackButton;
+  if (!button) return () => {};
+  button.onClick(onBack);
+  button.show();
+  return () => {
+    button.offClick(onBack);
+    button.hide();
+  };
+};

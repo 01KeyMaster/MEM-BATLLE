@@ -113,6 +113,9 @@ importers:
       dotenv:
         specifier: ^18.0.10
         version: 18.0.10
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@meme/shared':
         specifier: workspace:*

@@ -6,8 +6,11 @@ import { createPrisma } from '@meme/db';
 import { env } from './env.ts';
 import { authPlugin } from './auth/plugin.ts';
 import { meRoutes } from './routes/me.ts';
+import { collectionRoutes } from './routes/collection.ts';
+import { createCollectionService } from './services/collection.ts';
 
 const prisma = createPrisma();
+const collection = createCollectionService(prisma);
 
 const app = Fastify({
   logger: {
@@ -39,6 +42,7 @@ await app.register(
   async (api) => {
     await api.register(authPlugin, { prisma });
     await api.register(meRoutes);
+    await api.register(collectionRoutes, { collection });
   },
   { prefix: '/api' },
 );
