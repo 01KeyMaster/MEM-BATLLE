@@ -1,0 +1,24 @@
+# Локальная база для разработки. Запуск: pnpm db:up
+name: meme-battle-dev
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    # Значения берутся из .env в корне (скрипт pnpm db:up передаёт --env-file)
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-meme}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-meme_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-meme_battle}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

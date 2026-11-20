@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.vite/
+
+# Секреты — никогда не коммитим
+.env
+.env.*
+!.env.example
+
+# Сгенерированный Prisma-клиент
+packages/db/src/generated/
+
+# Загруженные картинки (хранятся в docker volume / локальной папке)
+uploads/
+
+# IDE и система
+.idea/
+.DS_Store
+*.log

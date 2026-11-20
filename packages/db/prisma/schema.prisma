@@ -1,0 +1,485 @@
+// Схема базы данных «Мем-батла».
+// После изменения схемы: pnpm db:migrate (создаст миграцию и обновит клиент).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────── Перечисления ─────────────────────────
+
+enum CardType {
+  MEME      // карта с картинкой — кладут игроки
+  SITUATION // карта ситуации — открывает сервер
+}
+
+enum Rarity {
+  COMMON
+  RARE
+  LEGENDARY
+}
+
+enum PackTier {
+  STANDARD
+  SUPER // «сверхсмешные» паки — дороже
+}
+
+// Откуда у игрока появился пак / карта / косметика
+enum GrantSource {
+  BASE     // базовый бесплатный контент
+  PURCHASE // куплено за Stars
+  REFERRAL // награда за друзей
+  SEASON   // сезонный пропуск
+  ADMIN    // выдано вручную
+}
+
+enum RoomMode {
+  FRIENDS // по ссылке
+  RANDOM  // матчмейкинг
+}
+
+enum RoomStatus {
+  LOBBY
+  PLAYING
+  FINISHED
+  ABANDONED
+}
+
+enum RoundStatus {
+  PLAYING // игроки кладут карты (30 сек)
+  VOTING  // голосование (20 сек)
+  FINISHED
+}
+
+enum ProductType {
+  PACK
+  COSMETIC
+  SEASON_PASS
+}
+
+enum PaymentStatus {
+  PENDING  // инвойс создан, оплаты ещё нет
+  PAID     // пришёл successful_payment, покупка выдана
+  REFUNDED // сделан возврат
+}
+
+enum CosmeticType {
+  CARD_FRAME
+  CARD_BACK
+  AVATAR_FRAME
+  WIN_ANIMATION
+  REACTION
+}
+
+enum AdRewardType {
+  RESHUFFLE_HAND // сбросить руку
+  EXTRA_CARD     // доп. карта в руку
+}
+
+// ───────────────────────── Пользователи ─────────────────────────
+
+model User {
+  id         String  @id @default(cuid())
+  telegramId BigInt  @unique
+  username   String?
+  firstName  String
+  lastName   String?
+  photoUrl   String?
+  languageCode String?
+  isBanned   Boolean @default(false)
+
+  // Статистика для профиля
+  gamesPlayed Int @default(0)
+  gamesWon    Int @default(0)
+  roundsWon   Int @default(0)
+
+  // Дата первой сыгранной игры — нужна для засчитывания рефералки
+  firstGameAt DateTime?
+  // Сколько наград за рефералку уже выдано (по одной за каждые 3 друга)
+  referralRewardsGranted Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  packs             UserPack[]
+  cards             UserCard[]
+  deck              Deck?
+  roomPlayers       RoomPlayer[]
+  hostedRooms       Room[]             @relation("RoomHost")
+  payments          Payment[]
+  cosmetics         UserCosmetic[]
+  seasonPasses      SeasonPass[]
+  customSituations  CustomSituation[]
+  referralsMade     Referral[]         @relation("Inviter")
+  referredBy        Referral?          @relation("Invited")
+  dailyTrials       DailyTrial[]
+  adRewards         AdReward[]
+}
+
+// ───────────────────────── Контент ─────────────────────────
+
+model Pack {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String   @default("")
+  iconUrl     String?
+  priceStars  Int      @default(0) // 0 = бесплатный
+  tier        PackTier @default(STANDARD)
+  isBase      Boolean  @default(false) // базовый пак есть у всех
+  isActive    Boolean  @default(true)  // выключенный пак не виден в магазине
+  sortOrder   Int      @default(0)
+
+  // Спонсор: показываем бейдж «при поддержке …»
+  sponsorName    String?
+  sponsorLogoUrl String?
+  sponsorUrl     String?
+
+  // Сезонный пак: открывается на неделе seasonWeek (1, 2, 3…) от начала сезона
+  seasonId   String?
+  season     Season? @relation(fields: [seasonId], references: [id])
+  seasonWeek Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cards       Card[]
+  owners      UserPack[]
+  dailyTrials DailyTrial[]
+}
+
+model Card {
+  id       String   @id @default(cuid())
+  packId   String
+  pack     Pack     @relation(fields: [packId], references: [id])
+  type     CardType
+  rarity   Rarity   @default(COMMON)
+  imageUrl String?  // для MEME
+  text     String?  // подпись мема или текст ситуации
+
+  // Откуда картинка и по какой лицензии — для проверки прав
+  source  String // например: "своя", "сгенерировано", ссылка на источник
+  license String // например: "own", "CC0", "CC BY 4.0"
+  author  String?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  owners    UserCard[]
+  deckCards DeckCard[]
+  plays     Play[]
+  rounds    Round[]
+
+  @@index([packId, type])
+}
+
+// Какие паки есть у игрока
+model UserPack {
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  packId    String
+  pack      Pack        @relation(fields: [packId], references: [id])
+  source    GrantSource
+  createdAt DateTime    @default(now())
+
+  @@id([userId, packId])
+}
+
+// Отдельные карты вне паков (например, редкая карта за рефералку)
+model UserCard {
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  cardId    String
+  card      Card        @relation(fields: [cardId], references: [id])
+  source    GrantSource
+  createdAt DateTime    @default(now())
+
+  @@id([userId, cardId])
+}
+
+// ───────────────────────── Колода ─────────────────────────
+
+model Deck {
+  id        String     @id @default(cuid())
+  userId    String     @unique // у игрока одна активная колода
+  user      User       @relation(fields: [userId], references: [id])
+  updatedAt DateTime   @updatedAt
+  cards     DeckCard[]
+}
+
+model DeckCard {
+  deckId   String
+  deck     Deck   @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  cardId   String
+  card     Card   @relation(fields: [cardId], references: [id])
+  position Int    // 0..23
+
+  // Каждая карта в колоде — не больше одного раза
+  @@id([deckId, cardId])
+}
+
+// ───────────────────────── Игра ─────────────────────────
+
+model Room {
+  id         String     @id @default(cuid())
+  code       String     @unique // короткий код для ссылки startapp=<code>
+  mode       RoomMode
+  status     RoomStatus @default(LOBBY)
+  hostId     String?
+  host       User?      @relation("RoomHost", fields: [hostId], references: [id])
+  winScore   Int        @default(7)
+  maxPlayers Int        @default(6)
+
+  createdAt  DateTime  @default(now())
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  players     RoomPlayer[]
+  rounds      Round[]
+  dailyTrials DailyTrial[]
+  adRewards   AdReward[]
+
+  @@index([status, mode])
+}
+
+model RoomPlayer {
+  id       String  @id @default(cuid())
+  roomId   String
+  room     Room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId   String? // null у ботов
+  user     User?   @relation(fields: [userId], references: [id])
+  isBot    Boolean @default(false) // место изначально занято ботом
+  botName  String?
+  // Игрок вышел — за него временно играет бот (очки и место сохраняются).
+  // Вернулся — снова управляет сам.
+  controlledByBot Boolean @default(false)
+  seat     Int     // место за столом 0..5
+  score    Int     @default(0)
+  isWinner Boolean @default(false)
+
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+
+  plays Play[]
+  votes Vote[]
+
+  @@unique([roomId, seat])
+  @@unique([roomId, userId])
+}
+
+model Round {
+  id     String      @id @default(cuid())
+  roomId String
+  room   Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  number Int
+  status RoundStatus @default(PLAYING)
+
+  // Ситуация — либо из пака, либо своя от хозяина комнаты
+  situationCardId   String?
+  situationCard     Card?            @relation(fields: [situationCardId], references: [id])
+  customSituationId String?
+  customSituation   CustomSituation? @relation(fields: [customSituationId], references: [id])
+
+  startedAt    DateTime  @default(now())
+  playDeadline DateTime
+  voteDeadline DateTime?
+  finishedAt   DateTime?
+
+  plays Play[]
+  votes Vote[]
+
+  @@unique([roomId, number])
+}
+
+// Карта, которую игрок положил в раунде
+model Play {
+  id           String     @id @default(cuid())
+  roundId      String
+  round        Round      @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  playerId     String
+  player       RoomPlayer @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  cardId       String
+  card         Card       @relation(fields: [cardId], references: [id])
+  isAuto       Boolean    @default(false) // положена сервером, игрок не успел
+  displayOrder Int?       // случайный порядок показа при голосовании
+  votesCount   Int        @default(0)
+  isWinner     Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+
+  votes Vote[]
+
+  @@unique([roundId, playerId]) // одна карта на игрока за раунд
+}
+
+model Vote {
+  id        String     @id @default(cuid())
+  roundId   String
+  round     Round      @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  voterId   String
+  voter     RoomPlayer @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  playId    String
+  play      Play       @relation(fields: [playId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+
+  @@unique([roundId, voterId]) // один голос на игрока за раунд
+}
+
+// ───────────────────────── Платежи ─────────────────────────
+
+model Payment {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  productType ProductType
+  productId   String        // id пака / косметики / сезона
+  amountStars Int
+  status      PaymentStatus @default(PENDING)
+
+  // Наш уникальный payload в инвойсе — по нему находим покупку
+  invoicePayload String @unique
+  // Защита от двойной выдачи: один платёж Telegram = одна запись
+  telegramPaymentChargeId String? @unique
+
+  isSubscription        Boolean   @default(false)
+  subscriptionExpiresAt DateTime?
+
+  createdAt  DateTime  @default(now())
+  paidAt     DateTime?
+  refundedAt DateTime?
+
+  seasonPasses SeasonPass[]
+
+  @@index([userId, status])
+}
+
+// ───────────────────────── Косметика и сезоны ─────────────────────────
+
+model Cosmetic {
+  id         String       @id @default(cuid())
+  slug       String       @unique
+  type       CosmeticType
+  title      String
+  assetUrl   String       // картинка / анимация / эмодзи
+  priceStars Int          @default(0)
+  isActive   Boolean      @default(true)
+
+  // Эксклюзив сезона: доступен владельцам пропуска с недели seasonWeek
+  seasonId   String?
+  season     Season? @relation(fields: [seasonId], references: [id])
+  seasonWeek Int?
+
+  createdAt DateTime @default(now())
+  owners    UserCosmetic[]
+}
+
+model UserCosmetic {
+  userId     String
+  user       User        @relation(fields: [userId], references: [id])
+  cosmeticId String
+  cosmetic   Cosmetic    @relation(fields: [cosmeticId], references: [id])
+  equipped   Boolean     @default(false)
+  source     GrantSource
+  createdAt  DateTime    @default(now())
+
+  @@id([userId, cosmeticId])
+}
+
+model Season {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  title      String
+  startsAt   DateTime
+  endsAt     DateTime
+  priceStars Int
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  packs     Pack[]
+  cosmetics Cosmetic[]
+  passes    SeasonPass[]
+}
+
+model SeasonPass {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  seasonId   String
+  season     Season   @relation(fields: [seasonId], references: [id])
+  validUntil DateTime // продлевается при каждой оплате подписки
+  paymentId  String?
+  payment    Payment? @relation(fields: [paymentId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, seasonId])
+}
+
+// ───────────────────────── Прочее ─────────────────────────
+
+// Настройки, которые меняются из админки без перезапуска.
+// Например: key = "referralRewardCardId", value = "card_123"
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+// Свои карты ситуаций хозяина комнаты (до 10 штук)
+model CustomSituation {
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id])
+  text      String   @db.VarChar(200)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  rounds Round[]
+
+  @@index([ownerId])
+}
+
+model Referral {
+  id          String    @id @default(cuid())
+  inviterId   String
+  inviter     User      @relation("Inviter", fields: [inviterId], references: [id])
+  invitedId   String    @unique // человека можно пригласить только один раз
+  invited     User      @relation("Invited", fields: [invitedId], references: [id])
+  createdAt   DateTime  @default(now())
+  qualifiedAt DateTime? // когда приглашённый сыграл первую игру
+
+  @@index([inviterId])
+}
+
+// Пробник дня: одна запись на игрока в сутки
+model DailyTrial {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  day       DateTime @db.Date
+  packId    String
+  pack      Pack     @relation(fields: [packId], references: [id])
+  roomId    String?
+  room      Room?    @relation(fields: [roomId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, day])
+}
+
+// Награда за рекламу: одна на игрока за игру
+model AdReward {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  roomId      String
+  room        Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  type        AdRewardType
+  providerRef String?      // id показа от рекламной сети
+  usedAt      DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@unique([userId, roomId])
+}

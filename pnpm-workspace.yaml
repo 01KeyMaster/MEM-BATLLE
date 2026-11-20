@@ -1,0 +1,9 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Разрешаем пакетам Prisma и esbuild выполнять установочные скрипты
+onlyBuiltDependencies:
+  - "@prisma/engines"
+  - prisma
+  - esbuild

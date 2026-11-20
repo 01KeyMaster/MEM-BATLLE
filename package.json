@@ -1,0 +1,22 @@
+{
+  "name": "meme-battle",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "db:up": "docker compose --env-file .env -f docker/docker-compose.dev.yml up -d",
+    "db:down": "docker compose --env-file .env -f docker/docker-compose.dev.yml down",
+    "db:generate": "pnpm --filter @meme/db generate",
+    "db:migrate": "pnpm --filter @meme/db migrate",
+    "db:seed": "pnpm --filter @meme/db seed",
+    "db:studio": "pnpm --filter @meme/db studio",
+    "dev:api": "pnpm --filter @meme/api dev",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
+}
