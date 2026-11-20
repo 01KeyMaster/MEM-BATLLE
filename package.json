@@ -17,6 +17,7 @@
     "dev:api": "pnpm --filter @meme/api dev",
     "dev:web": "pnpm --filter @meme/web dev",
     "dev:bot": "pnpm --filter @meme/bot dev",
+    "dev:tg": "pnpm --filter @meme/bot tunnel",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck"
   },

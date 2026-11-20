@@ -33,12 +33,12 @@ Telegram Mini App — карточная игра с мемами.
 | `pnpm typecheck` | проверка типов во всём проекте |
 | `pnpm db:studio` | просмотр базы в браузере |
 
-## Проверка в Telegram
+## Проверка в Telegram (на телефоне)
 
-1. Установить туннель: `brew install cloudflared`
-2. Запустить: `cloudflared tunnel --url http://localhost:5173` — он выдаст адрес `https://….trycloudflare.com`
-3. В @BotFather: `/myapps` → выбрать приложение → Edit Web App URL → вставить этот адрес
-4. Вписать адрес в `.env` как `WEB_APP_URL` и перезапустить `pnpm dev`
-5. Открыть бота в Telegram → `/start` → «Играть»
+1. Один раз: `brew install cloudflared`
+2. В одном терминале: `pnpm dev`
+3. Во втором терминале: `pnpm dev:tg` — сам запустит туннель, запишет адрес в `.env` и настроит бота
+4. На телефоне: открыть @mem_fight_bot → кнопка «Играть» слева от поля ввода (или `/start`)
 
-Адрес туннеля меняется при каждом запуске cloudflared — шаги 3–4 придётся повторять.
+Оба терминала должны оставаться открытыми. `/newapp` в BotFather для разработки не нужен —
+он понадобится для ссылок-приглашений `t.me/mem_fight_bot/<app>?startapp=...` (этап 4).
